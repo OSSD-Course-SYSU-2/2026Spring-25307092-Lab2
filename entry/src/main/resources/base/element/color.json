@@ -1,0 +1,32 @@
+{
+  "color": [
+    {
+      "name": "pink_primary",
+      "value": "#F4A9AA"
+    },
+    {
+      "name": "pink_dark",
+      "value": "#E38A8B"
+    },
+    {
+      "name": "pink_light",
+      "value": "#FAD1D2"
+    },
+    {
+      "name": "gray_dark",
+      "value": "#3A3A3A"
+    },
+    {
+      "name": "gray_medium",
+      "value": "#BCC2C3"
+    },
+    {
+      "name": "gray_light",
+      "value": "#D9DDE0"
+    },
+    {
+      "name": "black_pure",
+      "value": "#000000"
+    }
+  ]
+}
