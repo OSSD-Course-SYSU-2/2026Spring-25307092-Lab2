@@ -1,4 +1,4 @@
-# 💰 小粉记账 (BEIBEI Account Book)
+# 💰 北北记账 (BEIBEI Account Book)
 
 一个基于 **HarmonyOS ArkTS** 开发的粉色系记账应用。
 
