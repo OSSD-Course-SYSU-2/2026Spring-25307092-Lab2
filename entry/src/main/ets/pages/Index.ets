@@ -1,11 +1,13 @@
 import promptAction from '@ohos.promptAction';
+import preferences from '@ohos.data.preferences';
 
-// 1. 原有接口（新增 category 字段）
+// 1. 原有接口（新增 category 和 date 字段）
 interface BillRecord {
   type: string;
   category: string;
   money: number;
   note: string;
+  date: string;
 }
 
 // 2. 类别数据
@@ -29,9 +31,48 @@ struct Index {
 
   // 新增类别选择状态
   @State selectedCategoryIndex: number = 0;
+  @State selectedDate: string = new Date().toISOString().split('T')[0];
+
+  private dataPreferences: preferences.Preferences | null = null;
+
+  // 初始化数据存储
+  async initPreferences() {
+    try {
+      this.dataPreferences = await preferences.getPreferences(getContext(), 'bill_data');
+      const totalStr = await this.dataPreferences.get('total', '0') as string;
+      this.total = parseFloat(totalStr);
+      const recordsStr = await this.dataPreferences.get('records', '[]') as string;
+      this.records = JSON.parse(recordsStr);
+    } catch (e) {
+      console.error('加载数据失败', e);
+    }
+  }
+
+  // 保存数据
+  async saveData() {
+    try {
+      if (this.dataPreferences) {
+        await this.dataPreferences.put('total', this.total.toString());
+        await this.dataPreferences.put('records', JSON.stringify(this.records));
+        await this.dataPreferences.flush();
+      }
+    } catch (e) {
+      console.error('保存数据失败', e);
+    }
+  }
+
+  aboutToAppear() {
+    this.initPreferences();
+  }
 
   private getCurrentCategories(): string[] {
     return this.isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  }
+
+  // 解析日期字符串为 Date
+  private parseDate(dateStr: string): Date {
+    const parts = dateStr.split('-');
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
   }
 
   // 切换到上一个类别
@@ -67,6 +108,7 @@ struct Index {
         if (result.index === 1) {
           this.records = [];
           this.total = 0;
+          this.saveData();
           promptAction.showToast({ message: '已清空所有记录', duration: 2000 });
         }
       });
@@ -84,7 +126,30 @@ struct Index {
       this.total += record.money;
     }
     this.records.splice(index, 1);
+    this.saveData();
     promptAction.showToast({ message: '已删除', duration: 1500 });
+  }
+
+  // 计算本月收入
+  private getMonthIncome(): number {
+    let total = 0;
+    for (let i = 0; i < this.records.length; i++) {
+      if (this.records[i].type === '收入') {
+        total += this.records[i].money;
+      }
+    }
+    return total;
+  }
+
+  // 计算本月支出
+  private getMonthExpense(): number {
+    let total = 0;
+    for (let i = 0; i < this.records.length; i++) {
+      if (this.records[i].type === '支出') {
+        total += this.records[i].money;
+      }
+    }
+    return total;
   }
 
   // 左滑删除按钮（用 @Builder 装饰）
@@ -212,6 +277,33 @@ struct Index {
         .fontColor('#555555')
         .placeholderColor('#999999');
 
+      // 日期选择
+      Row() {
+        Text('选择日期')
+          .fontSize(15)
+          .fontColor('#3A3A3A')
+          .width(70);
+        DatePicker({
+          start: new Date('2020-1-1'),
+          end: new Date('2030-12-31'),
+          selected: this.parseDate(this.selectedDate)
+        })
+          .onChange((value: DatePickerResult) => {
+            const year = value.year;
+            const month = (value.month! + 1).toString().padStart(2, '0');
+            const day = value.day!.toString().padStart(2, '0');
+            this.selectedDate = year + '-' + month + '-' + day;
+          })
+          .width(160)
+          .height(48)
+          .borderRadius(12)
+          .textStyle({ color: '#3A3A3A' })
+          .selectedTextStyle({ color: '#F4A9AA' });
+      }
+      .width('80%')
+      .justifyContent(FlexAlign.SpaceBetween)
+      .padding({ top: 5, bottom: 2 });
+
       // 保存按钮
       Button('保存记录')
         .onClick(() => {
@@ -230,13 +322,15 @@ struct Index {
             type: this.isIncome ? '收入' : '支出',
             category: selectedCategory,
             money: num,
-            note: this.note || '无备注'
+            note: this.note || '无备注',
+            date: this.selectedDate
           });
           this.money = '';
           this.note = '';
+          this.saveData();
         })
         .width('80%')
-        .margin({ top: 10 })
+        .margin({ top: 3 })
         .height(48)
         .borderRadius(12)
         .backgroundColor('#F4A9AA')
@@ -256,6 +350,75 @@ struct Index {
         .fontSize(14)
         .fontWeight(FontWeight.Medium)
         .margin({ top: 5 });
+
+      // 本月统计
+      Column() {
+        Row() {
+          Text('本月统计')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#3A3A3A');
+        }
+        .width('90%')
+        .margin({ top: 5, bottom: 5 });
+
+        Row({ space: 8 }) {
+          // 收入统计
+          Column() {
+            Text('收入')
+              .fontSize(12)
+              .fontColor('#999999')
+              .margin({ bottom: 3 });
+            Text('¥ ' + this.getMonthIncome().toFixed(2))
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#F4A9AA');
+          }
+          .width('28%')
+          .padding(10)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(12)
+          .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
+
+          // 支出统计
+          Column() {
+            Text('支出')
+              .fontSize(12)
+              .fontColor('#999999')
+              .margin({ bottom: 3 });
+            Text('¥ ' + this.getMonthExpense().toFixed(2))
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#F4A9AA');
+          }
+          .width('28%')
+          .padding(10)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(12)
+          .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
+
+          // 本月结余
+          Column() {
+            Text('结余')
+              .fontSize(12)
+              .fontColor('#999999')
+              .margin({ bottom: 3 });
+            Text('¥ ' + (this.getMonthIncome() - this.getMonthExpense()).toFixed(2))
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#F4A9AA');
+          }
+          .width('28%')
+          .padding(10)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(12)
+          .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
+        }
+        .width('90%')
+        .justifyContent(FlexAlign.Center);
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Center);
 
       // 历史记录标题
       Text('历史记录')
@@ -283,11 +446,17 @@ struct Index {
                 }
                 .alignItems(HorizontalAlign.Start);
                 Blank();
-                Text(item.note || '')
-                  .fontSize(13)
-                  .fontColor('#3A3A3A')
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis });
+                Column() {
+                  Text(item.date || '')
+                    .fontSize(11)
+                    .fontColor('#999999');
+                  Text(item.note || '')
+                    .fontSize(13)
+                    .fontColor('#3A3A3A')
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis });
+                }
+                .alignItems(HorizontalAlign.End);
               }
               .width('90%')
               .padding(12)
