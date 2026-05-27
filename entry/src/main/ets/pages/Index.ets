@@ -462,7 +462,7 @@ struct Index {
               .padding(12)
               .backgroundColor('#FFFFFF')
               .borderRadius(12)
-              .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
+              .shadow({ radius: 5, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
             }
             .swipeAction({ end: this.deleteButton(index) })
           }, (item: BillRecord, index: number) => index.toString() + item.money + item.note)
