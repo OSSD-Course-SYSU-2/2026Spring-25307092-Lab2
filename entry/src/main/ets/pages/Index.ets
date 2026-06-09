@@ -1,5 +1,6 @@
 import promptAction from '@ohos.promptAction';
 import preferences from '@ohos.data.preferences';
+import window from '@ohos.window';
 
 // 1. 原有接口（新增 category 和 date 字段）
 interface BillRecord {
@@ -32,6 +33,7 @@ struct Index {
   // 新增类别选择状态
   @State selectedCategoryIndex: number = 0;
   @State selectedDate: string = new Date().toISOString().split('T')[0];
+  @State currentBreakpoint: string = 'SM';
 
   private dataPreferences: preferences.Preferences | null = null;
 
@@ -63,10 +65,34 @@ struct Index {
 
   aboutToAppear() {
     this.initPreferences();
+    try {
+      window.getLastWindow(getContext()).then((win) => {
+        const updateBreakpoint = () => {
+          const rect = win.getWindowProperties().windowRect;
+          const width = rect.width;
+          const height = rect.height;
+          const ratio = width / height;
+          if (ratio > 0.85 && width > 500) {
+            this.currentBreakpoint = 'MD';
+          } else {
+            this.currentBreakpoint = 'SM';
+          }
+        };
+        updateBreakpoint();
+        win.resize(420, 800);
+        win.on('windowSizeChange', updateBreakpoint);
+      });
+    } catch (e) {
+      console.error('监听窗口变化失败', e);
+    }
   }
 
   private getCurrentCategories(): string[] {
     return this.isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  }
+
+  private isTablet(): boolean {
+    return this.currentBreakpoint === 'MD' || this.currentBreakpoint === 'LG';
   }
 
   // 解析日期字符串为 Date
@@ -169,142 +195,264 @@ struct Index {
 
   build() {
     Column({ space: 10 }) {
-      // 余额卡片
-      Column() {
-        Text('当前余额')
-          .fontSize(14)
-          .fontColor('#FFFFFF')
-          .opacity(0.8)
-          .margin({ bottom: 5 });
-        Text('¥ ' + this.total.toFixed(2))
-          .fontSize(36)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#FFFFFF');
-      }
-      .width('90%')
-      .height(110)
-      .borderRadius(20)
-      .justifyContent(FlexAlign.Center)
-      .backgroundColor('#F4A9AA')
-      .shadow({ radius: 8, color: '#F4A9AA40', offsetX: 0, offsetY: 4 })
-      .margin({ top: 15 });
+      if (this.isTablet()) {
+        Row({ space: 15 }) {
+          Column() {
+            Text('当前余额')
+              .fontSize(14)
+              .fontColor('#FFFFFF')
+              .opacity(0.8)
+              .margin({ bottom: 5 });
+            Text('¥ ' + this.total.toFixed(2))
+              .fontSize(36)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#FFFFFF');
+          }
+          .width('50%')
+          .height(110)
+          .borderRadius(20)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor('#F4A9AA')
+          .shadow({ radius: 8, color: '#F4A9AA40', offsetX: 0, offsetY: 4 });
 
-      // 收入/支出切换
-      Row({ space: 12 }) {
-        Button('收入')
-          .backgroundColor(this.isIncome ? '#F4A9AA' : '#D9DDE0')
-          .onClick(() => {
-            this.isIncome = true;
-            this.selectedCategoryIndex = 0;
-          })
+          Column({ space: 10 }) {
+            Button('💰 收入')
+              .backgroundColor(this.isIncome ? '#F4A9AA' : '#D9DDE0')
+              .onClick(() => {
+                this.isIncome = true;
+                this.selectedCategoryIndex = 0;
+              })
+              .width('80%')
+              .height(44)
+              .borderRadius(22)
+              .fontColor(this.isIncome ? '#FFFFFF' : '#3A3A3A')
+              .fontWeight(FontWeight.Medium);
+            Button('💸 支出')
+              .backgroundColor(!this.isIncome ? '#F4A9AA' : '#D9DDE0')
+              .onClick(() => {
+                this.isIncome = false;
+                this.selectedCategoryIndex = 0;
+              })
+              .width('80%')
+              .height(44)
+              .borderRadius(22)
+              .fontColor(!this.isIncome ? '#FFFFFF' : '#3A3A3A')
+              .fontWeight(FontWeight.Medium);
+          }
           .width('40%')
-          .height(44)
-          .borderRadius(22)
-          .fontColor(this.isIncome ? '#FFFFFF' : '#3A3A3A')
-          .fontWeight(FontWeight.Medium);
-        Button('支出')
-          .backgroundColor(!this.isIncome ? '#F4A9AA' : '#D9DDE0')
-          .onClick(() => {
-            this.isIncome = false;
-            this.selectedCategoryIndex = 0;
-          })
-          .width('40%')
-          .height(44)
-          .borderRadius(22)
-          .fontColor(!this.isIncome ? '#FFFFFF' : '#3A3A3A')
-          .fontWeight(FontWeight.Medium);
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center);
+          .alignItems(HorizontalAlign.Center);
+        }
+        .width('90%')
+        .margin({ top: 15 });
+      } else {
+        Column() {
+          Text('当前余额')
+            .fontSize(14)
+            .fontColor('#FFFFFF')
+            .opacity(0.8)
+            .margin({ bottom: 5 });
+          Text('¥ ' + this.total.toFixed(2))
+            .fontSize(36)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FFFFFF');
+        }
+        .width('90%')
+        .height(110)
+        .borderRadius(20)
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor('#F4A9AA')
+        .shadow({ radius: 8, color: '#F4A9AA40', offsetX: 0, offsetY: 4 })
+        .margin({ top: 15 });
 
-      // 类别选择器
-      Row() {
-        Text('选择类别')
-          .fontSize(15)
-          .fontColor('#3A3A3A')
-          .width(70);
-
-        Row() {
-          Text('  <  ')
-            .fontSize(18)
-            .fontColor('#F4A9AA')
+        Row({ space: 12 }) {
+          Button('收入')
+            .backgroundColor(this.isIncome ? '#F4A9AA' : '#D9DDE0')
             .onClick(() => {
-              this.prevCategory();
-            });
+              this.isIncome = true;
+              this.selectedCategoryIndex = 0;
+            })
+            .width('40%')
+            .height(44)
+            .borderRadius(22)
+            .fontColor(this.isIncome ? '#FFFFFF' : '#3A3A3A')
+            .fontWeight(FontWeight.Medium);
+          Button('支出')
+            .backgroundColor(!this.isIncome ? '#F4A9AA' : '#D9DDE0')
+            .onClick(() => {
+              this.isIncome = false;
+              this.selectedCategoryIndex = 0;
+            })
+            .width('40%')
+            .height(44)
+            .borderRadius(22)
+            .fontColor(!this.isIncome ? '#FFFFFF' : '#3A3A3A')
+            .fontWeight(FontWeight.Medium);
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center);
+      }
 
-          Text(this.getCurrentCategories()[this.selectedCategoryIndex])
+      if (this.isTablet()) {
+        Row({ space: 12 }) {
+          Row() {
+            Text('选择类别')
+              .fontSize(15)
+              .fontColor('#3A3A3A')
+              .width(70);
+            Row() {
+              Text('  <  ')
+                .fontSize(18)
+                .fontColor('#F4A9AA')
+                .onClick(() => { this.prevCategory(); });
+              Text(this.getCurrentCategories()[this.selectedCategoryIndex])
+                .fontSize(15)
+                .fontColor('#3A3A3A')
+                .textAlign(TextAlign.Center)
+                .backgroundColor('#FDE0E1')
+                .borderRadius(8)
+                .padding({ left: 16, right: 16, top: 8, bottom: 8 });
+              Text('  >  ')
+                .fontSize(18)
+                .fontColor('#F4A9AA')
+                .onClick(() => { this.nextCategory(); });
+            }
+          }
+          .width('45%')
+          .justifyContent(FlexAlign.SpaceBetween);
+
+          Row() {
+            Text('选择日期')
+              .fontSize(15)
+              .fontColor('#3A3A3A')
+              .width(70);
+            DatePicker({
+              start: new Date('2020-1-1'),
+              end: new Date('2030-12-31'),
+              selected: this.parseDate(this.selectedDate)
+            })
+              .onChange((value: DatePickerResult) => {
+                const year = value.year;
+                const month = (value.month! + 1).toString().padStart(2, '0');
+                const day = value.day!.toString().padStart(2, '0');
+                this.selectedDate = year + '-' + month + '-' + day;
+              })
+              .width(160)
+              .height(48)
+              .borderRadius(12)
+              .backgroundColor('#FDE0E1')
+              .textStyle({ color: '#3A3A3A' })
+              .selectedTextStyle({ color: '#F4A9AA' });
+          }
+          .width('45%')
+          .justifyContent(FlexAlign.SpaceBetween);
+        }
+        .width('80%')
+        .justifyContent(FlexAlign.SpaceBetween)
+        .padding({ top: 5, bottom: 5 });
+      } else {
+        Row() {
+          Text('选择类别')
             .fontSize(15)
             .fontColor('#3A3A3A')
-            .textAlign(TextAlign.Center)
-            .backgroundColor('#FDE0E1')
-            .borderRadius(8)
-            .padding({ left: 16, right: 16, top: 8, bottom: 8 });
-
-          Text('  >  ')
-            .fontSize(18)
-            .fontColor('#F4A9AA')
-            .onClick(() => {
-              this.nextCategory();
-            });
+            .width(70);
+          Row() {
+            Text('  <  ')
+              .fontSize(18)
+              .fontColor('#F4A9AA')
+              .onClick(() => { this.prevCategory(); });
+            Text(this.getCurrentCategories()[this.selectedCategoryIndex])
+              .fontSize(15)
+              .fontColor('#3A3A3A')
+              .textAlign(TextAlign.Center)
+              .backgroundColor('#FDE0E1')
+              .borderRadius(8)
+              .padding({ left: 16, right: 16, top: 8, bottom: 8 });
+            Text('  >  ')
+              .fontSize(18)
+              .fontColor('#F4A9AA')
+              .onClick(() => { this.nextCategory(); });
+          }
         }
-      }
-      .width('80%')
-      .justifyContent(FlexAlign.SpaceBetween)
-      .padding({ top: 5, bottom: 5 });
-
-      // 金额输入框
-      TextInput({ placeholder: '请输入金额' })
-        .type(InputType.Number)
-        .onChange((v: string) => this.money = v)
         .width('80%')
-        .margin({ top: 5 })
-        .height(48)
-        .borderRadius(12)
-        .backgroundColor('#FDE0E1')
-        .padding({ left: 16 })
-        .fontColor('#555555')
-        .placeholderColor('#999999');
+        .justifyContent(FlexAlign.SpaceBetween)
+        .padding({ top: 5, bottom: 0 });
 
-      // 备注输入框
-      TextInput({ placeholder: '请输入备注（如：吃饭、工资）' })
-        .onChange((v: string) => this.note = v)
-        .width('80%')
-        .margin({ top: 5 })
-        .height(48)
-        .borderRadius(12)
-        .backgroundColor('#FDE0E1')
-        .padding({ left: 16 })
-        .fontColor('#555555')
-        .placeholderColor('#999999');
-
-      // 日期选择
-      Row() {
-        Text('选择日期')
-          .fontSize(15)
-          .fontColor('#3A3A3A')
-          .width(70);
-        DatePicker({
-          start: new Date('2020-1-1'),
-          end: new Date('2030-12-31'),
-          selected: this.parseDate(this.selectedDate)
-        })
-          .onChange((value: DatePickerResult) => {
-            const year = value.year;
-            const month = (value.month! + 1).toString().padStart(2, '0');
-            const day = value.day!.toString().padStart(2, '0');
-            this.selectedDate = year + '-' + month + '-' + day;
+        Row() {
+          Text('选择日期')
+            .fontSize(15)
+            .fontColor('#3A3A3A')
+            .width(70);
+          DatePicker({
+            start: new Date('2020-1-1'),
+            end: new Date('2030-12-31'),
+            selected: this.parseDate(this.selectedDate)
           })
-          .width(160)
+            .onChange((value: DatePickerResult) => {
+              const year = value.year;
+              const month = (value.month! + 1).toString().padStart(2, '0');
+              const day = value.day!.toString().padStart(2, '0');
+              this.selectedDate = year + '-' + month + '-' + day;
+            })
+            .width(160)
+            .height(48)
+            .borderRadius(12)
+            .textStyle({ color: '#3A3A3A' })
+            .selectedTextStyle({ color: '#F4A9AA' });
+        }
+        .width('80%')
+        .justifyContent(FlexAlign.SpaceBetween)
+        .padding({ top: 0, bottom: 0 });
+      }
+
+      if (this.isTablet()) {
+        Row({ space: 12 }) {
+          TextInput({ placeholder: '请输入金额' })
+            .type(InputType.Number)
+            .onChange((v: string) => this.money = v)
+            .width('45%')
+            .height(48)
+            .borderRadius(12)
+            .backgroundColor('#FDE0E1')
+            .padding({ left: 16 })
+            .fontColor('#555555')
+            .placeholderColor('#999999');
+          TextInput({ placeholder: '请输入备注（如：吃饭、工资）' })
+            .onChange((v: string) => this.note = v)
+            .width('45%')
+            .height(48)
+            .borderRadius(12)
+            .backgroundColor('#FDE0E1')
+            .padding({ left: 16 })
+            .fontColor('#555555')
+            .placeholderColor('#999999');
+        }
+        .width('80%')
+        .justifyContent(FlexAlign.SpaceBetween)
+        .margin({ top: 5 });
+      } else {
+        TextInput({ placeholder: '请输入金额' })
+          .type(InputType.Number)
+          .onChange((v: string) => this.money = v)
+          .width('80%')
+          .margin({ top: 5 })
           .height(48)
           .borderRadius(12)
-          .textStyle({ color: '#3A3A3A' })
-          .selectedTextStyle({ color: '#F4A9AA' });
+          .backgroundColor('#FDE0E1')
+          .padding({ left: 16 })
+          .fontColor('#555555')
+          .placeholderColor('#999999');
+        TextInput({ placeholder: '请输入备注（如：吃饭、工资）' })
+          .onChange((v: string) => this.note = v)
+          .width('80%')
+          .margin({ top: 5 })
+          .height(48)
+          .borderRadius(12)
+          .backgroundColor('#FDE0E1')
+          .padding({ left: 16 })
+          .fontColor('#555555')
+          .placeholderColor('#999999');
       }
-      .width('80%')
-      .justifyContent(FlexAlign.SpaceBetween)
-      .padding({ top: 5, bottom: 2 });
 
-      // 保存按钮
       Button('保存记录')
         .onClick(() => {
           const num: number = parseFloat(this.money);
@@ -312,11 +460,8 @@ struct Index {
             promptAction.showToast({ message: '请输入有效金额', duration: 1500 });
             return;
           }
-          if (this.isIncome) {
-            this.total += num;
-          } else {
-            this.total -= num;
-          }
+          if (this.isIncome) { this.total += num; }
+          else { this.total -= num; }
           const selectedCategory = this.getCurrentCategories()[this.selectedCategoryIndex];
           this.records.unshift({
             type: this.isIncome ? '收入' : '支出',
@@ -339,7 +484,6 @@ struct Index {
         .fontWeight(FontWeight.Medium)
         .shadow({ radius: 4, color: '#F4A9AA60', offsetX: 0, offsetY: 2 });
 
-      // 清空按钮
       Button('清空所有记录')
         .onClick(() => this.clearAllRecords())
         .width('80%')
@@ -351,7 +495,6 @@ struct Index {
         .fontWeight(FontWeight.Medium)
         .margin({ top: 5 });
 
-      // 本月统计
       Column() {
         Row() {
           Text('本月统计')
@@ -362,65 +505,37 @@ struct Index {
         .width('90%')
         .margin({ top: 5, bottom: 5 });
 
-        Row({ space: 8 }) {
-          // 收入统计
-          Column() {
-            Text('收入')
-              .fontSize(12)
-              .fontColor('#999999')
-              .margin({ bottom: 3 });
-            Text('¥ ' + this.getMonthIncome().toFixed(2))
-              .fontSize(16)
-              .fontWeight(FontWeight.Bold)
-              .fontColor('#F4A9AA');
+        GridRow({ columns: 3, gutter: { x: 8, y: 0 } }) {
+          GridCol() {
+            Column() {
+              Text('收入').fontSize(12).fontColor('#999999').margin({ bottom: 3 });
+              Text('¥ ' + this.getMonthIncome().toFixed(2)).fontSize(16).fontWeight(FontWeight.Bold).fontColor('#F4A9AA');
+            }
+            .width('100%').padding(10).backgroundColor('#FFFFFF').borderRadius(12)
+            .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
           }
-          .width('28%')
-          .padding(10)
-          .backgroundColor('#FFFFFF')
-          .borderRadius(12)
-          .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
-
-          // 支出统计
-          Column() {
-            Text('支出')
-              .fontSize(12)
-              .fontColor('#999999')
-              .margin({ bottom: 3 });
-            Text('¥ ' + this.getMonthExpense().toFixed(2))
-              .fontSize(16)
-              .fontWeight(FontWeight.Bold)
-              .fontColor('#F4A9AA');
+          GridCol() {
+            Column() {
+              Text('支出').fontSize(12).fontColor('#999999').margin({ bottom: 3 });
+              Text('¥ ' + this.getMonthExpense().toFixed(2)).fontSize(16).fontWeight(FontWeight.Bold).fontColor('#F4A9AA');
+            }
+            .width('100%').padding(10).backgroundColor('#FFFFFF').borderRadius(12)
+            .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
           }
-          .width('28%')
-          .padding(10)
-          .backgroundColor('#FFFFFF')
-          .borderRadius(12)
-          .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
-
-          // 本月结余
-          Column() {
-            Text('结余')
-              .fontSize(12)
-              .fontColor('#999999')
-              .margin({ bottom: 3 });
-            Text('¥ ' + (this.getMonthIncome() - this.getMonthExpense()).toFixed(2))
-              .fontSize(16)
-              .fontWeight(FontWeight.Bold)
-              .fontColor('#F4A9AA');
+          GridCol() {
+            Column() {
+              Text('结余').fontSize(12).fontColor('#999999').margin({ bottom: 3 });
+              Text('¥ ' + (this.getMonthIncome() - this.getMonthExpense()).toFixed(2)).fontSize(16).fontWeight(FontWeight.Bold).fontColor('#F4A9AA');
+            }
+            .width('100%').padding(10).backgroundColor('#FFFFFF').borderRadius(12)
+            .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
           }
-          .width('28%')
-          .padding(10)
-          .backgroundColor('#FFFFFF')
-          .borderRadius(12)
-          .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
         }
-        .width('90%')
-        .justifyContent(FlexAlign.Center);
+        .width('90%');
       }
       .width('100%')
       .alignItems(HorizontalAlign.Center);
 
-      // 历史记录标题
       Text('历史记录')
         .fontSize(18)
         .margin({ top: 5, bottom: 5 })
@@ -428,49 +543,64 @@ struct Index {
         .fontColor('#3A3A3A')
         .width('90%');
 
-      // 记录列表（支持左滑删除）
-      Scroll() {
-        List({ space: 8 }) {
-          ForEach(this.records, (item: BillRecord, index: number) => {
-            ListItem() {
-              Row() {
-                Column() {
-                  Text(item.category)
-                    .fontSize(13)
-                    .fontColor('#BCC2C3');
-                  Text(item.type + '：¥' + item.money.toFixed(2))
-                    .fontSize(16)
-                    .fontColor(item.type === '收入' ? '#F4A9AA' : '#E38A8B')
-                    .fontWeight(FontWeight.Bold)
-                    .margin({ top: 2 });
+      if (this.isTablet()) {
+        Scroll() {
+          GridRow({ columns: 2, gutter: { x: 8, y: 8 } }) {
+            ForEach(this.records, (item: BillRecord, index: number) => {
+              GridCol() {
+                Row() {
+                  Column() {
+                    Text(item.category).fontSize(13).fontColor('#BCC2C3');
+                    Text(item.type + '：¥' + item.money.toFixed(2))
+                      .fontSize(16).fontColor(item.type === '收入' ? '#F4A9AA' : '#E38A8B').fontWeight(FontWeight.Bold).margin({ top: 2 });
+                  }
+                  .alignItems(HorizontalAlign.Start);
+                  Blank();
+                  Column() {
+                    Text(item.date || '').fontSize(11).fontColor('#999999');
+                    Text(item.note || '').fontSize(13).fontColor('#3A3A3A').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+                  }
+                  .alignItems(HorizontalAlign.End);
                 }
-                .alignItems(HorizontalAlign.Start);
-                Blank();
-                Column() {
-                  Text(item.date || '')
-                    .fontSize(11)
-                    .fontColor('#999999');
-                  Text(item.note || '')
-                    .fontSize(13)
-                    .fontColor('#3A3A3A')
-                    .maxLines(1)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis });
-                }
-                .alignItems(HorizontalAlign.End);
+                .width('100%').padding(12).backgroundColor('#FFFFFF').borderRadius(12)
+                .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
               }
-              .width('90%')
-              .padding(12)
-              .backgroundColor('#FFFFFF')
-              .borderRadius(12)
-              .shadow({ radius: 5, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
-            }
-            .swipeAction({ end: this.deleteButton(index) })
-          }, (item: BillRecord, index: number) => index.toString() + item.money + item.note)
+            }, (item: BillRecord, index: number) => index.toString() + item.money + item.note)
+          }
+          .width('90%');
         }
-        .width('100%')
+        .layoutWeight(1)
+        .width('100%');
+      } else {
+        Scroll() {
+          List({ space: 8 }) {
+            ForEach(this.records, (item: BillRecord, index: number) => {
+              ListItem() {
+                Row() {
+                  Column() {
+                    Text(item.category).fontSize(13).fontColor('#BCC2C3');
+                    Text(item.type + '：¥' + item.money.toFixed(2))
+                      .fontSize(16).fontColor(item.type === '收入' ? '#F4A9AA' : '#E38A8B').fontWeight(FontWeight.Bold).margin({ top: 2 });
+                  }
+                  .alignItems(HorizontalAlign.Start);
+                  Blank();
+                  Column() {
+                    Text(item.date || '').fontSize(11).fontColor('#999999');
+                    Text(item.note || '').fontSize(13).fontColor('#3A3A3A').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+                  }
+                  .alignItems(HorizontalAlign.End);
+                }
+                .width('90%').padding(12).backgroundColor('#FFFFFF').borderRadius(12)
+                .shadow({ radius: 4, color: '#D9DDE0', offsetX: 0, offsetY: 2 });
+              }
+              .swipeAction({ end: this.deleteButton(index) })
+            }, (item: BillRecord, index: number) => index.toString() + item.money + item.note)
+          }
+          .width('100%')
+        }
+        .layoutWeight(1)
+        .width('100%');
       }
-      .layoutWeight(1)
-      .width('100%');
     }
     .width('100%')
     .height('100%')
