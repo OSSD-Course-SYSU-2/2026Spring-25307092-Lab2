@@ -57,6 +57,8 @@ struct Index {
         await this.dataPreferences.put('total', this.total.toString());
         await this.dataPreferences.put('records', JSON.stringify(this.records));
         await this.dataPreferences.flush();
+        AppStorage.setOrCreate('total', this.total);
+        AppStorage.setOrCreate('records', JSON.stringify(this.records));
       }
     } catch (e) {
       console.error('保存数据失败', e);
@@ -65,6 +67,12 @@ struct Index {
 
   aboutToAppear() {
     this.initPreferences();
+    try {
+      const savedTotal = AppStorage.get<number>('total');
+      const savedRecords = AppStorage.get<string>('records');
+      if (savedTotal) { this.total = savedTotal; }
+      if (savedRecords) { this.records = JSON.parse(savedRecords); }
+    } catch (e) {}
     try {
       window.getLastWindow(getContext()).then((win) => {
         const updateBreakpoint = () => {
@@ -196,7 +204,8 @@ struct Index {
   build() {
     Column({ space: 10 }) {
       if (this.isTablet()) {
-        Row({ space: 15 }) {
+        Row() {
+          Blank('5%')
           Column() {
             Text('当前余额')
               .fontSize(14)
@@ -214,6 +223,8 @@ struct Index {
           .justifyContent(FlexAlign.Center)
           .backgroundColor('#F4A9AA')
           .shadow({ radius: 8, color: '#F4A9AA40', offsetX: 0, offsetY: 4 });
+
+          Blank('10%')
 
           Column({ space: 10 }) {
             Button('💰 收入')
@@ -241,8 +252,10 @@ struct Index {
           }
           .width('40%')
           .alignItems(HorizontalAlign.Center);
+
+          Blank('5%')
         }
-        .width('90%')
+        .width('100%')
         .margin({ top: 15 });
       } else {
         Column() {
@@ -597,6 +610,7 @@ struct Index {
             }, (item: BillRecord, index: number) => index.toString() + item.money + item.note)
           }
           .width('100%')
+          .alignListItem(ListItemAlign.Center)
         }
         .layoutWeight(1)
         .width('100%');

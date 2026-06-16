@@ -9,9 +9,9 @@ const DOMAIN: number = 0x0001;
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN, TAG, 'Ability onCreate');
-    if (want.parameters && want.parameters['total'] !== undefined) {
-      AppStorage.setOrCreate('total', want.parameters['total']);
-      AppStorage.setOrCreate('records', want.parameters['records']);
+    if (want.parameters) {
+      AppStorage.setOrCreate('total', want.parameters['total'] || 0);
+      AppStorage.setOrCreate('records', want.parameters['records'] || '[]');
     }
   }
 
@@ -49,8 +49,6 @@ export default class EntryAbility extends UIAbility {
 
   onContinue(wantParam: Record<string, Object>): AbilityConstant.OnContinueResult {
     hilog.info(DOMAIN, TAG, 'Ability onContinue');
-    wantParam['total'] = AppStorage.get<number>('total') || 0;
-    wantParam['records'] = AppStorage.get<string>('records') || '[]';
     return AbilityConstant.OnContinueResult.AGREE;
   }
 }
