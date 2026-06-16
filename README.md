@@ -35,6 +35,10 @@
 - **自适应**：窗口宽高比判断断点
 
 ## 📁 项目结构
+entry/src/main/ets/pages/Index.ets // 主页面（所有功能）
+entry/src/main/ets/entryability/EntryAbility.ets // 应用入口（含自由流转）
+entry/src/main/module.json5 // 模块配置（支持手机+平板）
+entry/src/main/resources/base/element/ // 资源文件（颜色、字符串）
 
 ## 🚀 运行
 
