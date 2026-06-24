@@ -15,6 +15,7 @@
 - 🧹 **一键清空**：支持清空所有记录，带确认弹窗
 - 💾 **数据持久化**：退出 App 自动保存，再次打开数据不丢失
 - 📱📟 **多端自适应**：自动识别手机/平板，手机竖排布局，平板横排双列布局
+- 🔄 **自由流转**：同一华为账号下，手机和平板数据自动同步
 
 ## 🎨 界面
 
@@ -22,6 +23,7 @@
 - 圆角卡片设计，柔和阴影
 - 浅粉色输入区域（#FDE0E1）
 - 收入/支出切换高亮
+- 手机端历史记录居中对齐
 - 简洁直观的交互
 
 ## 🛠️ 技术栈
@@ -29,15 +31,14 @@
 - **开发工具**：DevEco Studio
 - **语言**：ArkTS
 - **平台**：HarmonyOS
-- **数据存储**：Preferences
+- **数据存储**：Preferences（本地）+ AppStorage（跨设备流转）
 - **自适应**：窗口宽高比判断断点
 
 ## 📁 项目结构
 entry/src/main/ets/pages/Index.ets // 主页面（所有功能）
-entry/src/main/ets/entryability/EntryAbility.ets // 应用入口
+entry/src/main/ets/entryability/EntryAbility.ets // 应用入口（含自由流转）
 entry/src/main/module.json5 // 模块配置（支持手机+平板）
 entry/src/main/resources/base/element/ // 资源文件（颜色、字符串）
-
 
 ## 🚀 运行
 
@@ -49,3 +50,7 @@ entry/src/main/resources/base/element/ // 资源文件（颜色、字符串）
 - 手机模拟器：自动竖排布局
 - 平板模拟器：自动横排双列布局
 - 支持 Previewer 切换设备预览
+
+### 自由流转
+- 手机和平板登录同一华为账号
+- 数据自动同步，无缝切换
